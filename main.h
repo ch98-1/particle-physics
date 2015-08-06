@@ -26,9 +26,59 @@ along with this program.If not, see <http://www.gnu.org/licenses/>.
 #include "SDL.h"//include sdl
 
 #define WINDOW_NAME "Particle Rendering"
-#define WINDOWFLAGS SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE //resizable window
-#define WIDTH 600 //width and height of window
-#define HEIGHT 400
+#define WINDOWFLAGS SDL_WINDOW_OPENGL// window type
+#define G 1.0 //gravitational constant
+
+typedef struct positions{//positions for each particles
+	double x;
+	double y;
+	double z;
+}positions;
+
+typedef struct velocity{//velocity for each particle
+	double x;
+	double y;
+	double z;
+}velocity;
+
+typedef struct force{//force for each particle
+	double x;
+	double y;
+	double z;
+}force;
+
+typedef struct color{//color for each particle
+	char r;
+	char g;
+	char b;
+	char a;
+}color;
+
+typedef struct particle{//position and velocity of each particle
+	positions p;
+	velocity v;
+}particle;
+
+typedef double mass;//mass for each particle
+
+mass *particle_mass;//array of particle mass
+
+particle *particle_data[2];//array of 2 particle data
+
+color *particle_color;//array of particle color
+
+unsigned long long int num_particles;//number of particles in the simulation
+
+unsigned long long int p_time;//current time in simulation
+
+int simulation_thread;//number of thread to run for simulation
+
+int simulation_finished;//number of thread finished for simulation
+
+typedef struct loc{//starting and ending loctaion
+	unsigned long long int start;
+	unsigned long long int end;
+}loc;
 
 SDL_Window *window;//sdl window
 SDL_Renderer *renderer;//sdl renderer
@@ -36,5 +86,6 @@ SDL_Renderer *renderer;//sdl renderer
 int EventFilter(void* userdata, SDL_Event* e);//event filter
 void Quit(void);//quit everything
 void Usage(const char *arg);//print out usage
+int simulate(void *location);//simulate from starting and ending position in the array
 
 #endif

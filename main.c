@@ -19,18 +19,29 @@
 
 
 int main(int argc, char *argv[]){
-	if (!(argc == 3 || argc == 4 || argc == 5)){//if argument is not the right number
+	if (!( argc == 4 || argc == 8)){//if argument is not the right number
 		Usage(argv[0]);//print usage
 	}
-	else if (strcmp(argv[1], "simulate") == 0){//simulate from starting positions in the file
+	else if (strcmp(argv[1], "simulate") == 0 && argc == 4){//simulate from starting positions in the file
+		//quit SDL at exit
+		atexit(SDL_Quit);
+
 		if (SDL_Init(0) != 0){//start SDL and get any error if it dosen't.
 			printf("Could not load SDL: %s\n", SDL_GetError());//print out error
 			exit(EXIT_FAILURE);//exit
 		}
+		//filter events
+		SDL_SetEventFilter(EventFilter, NULL);
+
+
 	}
-	else if (strcmp(argv[1], "render") == 0){//render simulation file
+	else if (strcmp(argv[1], "render") == 0 && argc == 8){//render simulation file
 		renderer = NULL;//set values to null
 		window = NULL;
+		unsigned int width, height;//window width and height
+		
+		//quit SDL at exit
+		atexit(Quit);
 
 		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0){//start SDL and get any error if it dosen't.
 			printf("Could not load SDL: %s\n", SDL_GetError());//print out error
@@ -40,16 +51,13 @@ int main(int argc, char *argv[]){
 		//filter events
 		SDL_SetEventFilter(EventFilter, NULL);
 
-		//quit SDL at exit
-		atexit(Quit);
-
 		//Create window
 		window = SDL_CreateWindow(
 			WINDOW_NAME,                  // window title
 			SDL_WINDOWPOS_CENTERED,           // initial x position
 			SDL_WINDOWPOS_CENTERED,           // initial y position
-			WIDTH,                               // width, in pixels
-			HEIGHT,                               // height, in pixels
+			width,                               // width, in pixels
+			height,                               // height, in pixels
 			WINDOWFLAGS        //use these flags
 			);
 
@@ -73,7 +81,7 @@ int main(int argc, char *argv[]){
 		//initialise and load stuff
 
 		//main loop
-		while (1) {
+		while (0) {
 
 		}
 	}
@@ -94,12 +102,43 @@ int EventFilter(void* userdata, SDL_Event* e){//event filter
 }
 
 void Quit(void){//quit everything
-
+	SDL_DestroyRenderer(renderer);//destroy renderer
+	SDL_DestroyWindow(window);//destroy window
 	SDL_Quit();//quit SDL
-	
-	return;//exit function if it didn't exit for some reason
+	return;
 }
 
 void Usage(const char *arg){//print out usage
-	printf("Incorrect arguments\nUsage:\n%s simulate {file} {number of thread to run}: Generate simulation file from starting positions in the file. Use single thread if it was not specified\n%s render {file} {window width} {window height}: render simulation file at path. use default window size if it was not specified\nStarting position should be in a text file with particle name, x position, y position, z position, x speed, y speed, and z speed in each line as a comma seperated list\nYou have to have a text file named configure.txt with the first line listing camera position x, y, z, and camera pan x, y, z, and starting fron next line, particle name, and it's information in each line as a comma seperated list in the running directry to run the simulation", arg, arg);
+	printf("Incorrect arguments\nUsage:\n%s simulate {file} {steps}: Generate simulation file from starting positions in the file.\n%s render {file}  {camera position: x,y,z} {camera pan in degrees: x,y,z} {window size: width,height} {skip} {delay(ms)}: render every {skip} steps in simulation file at path.\nStarting position should be in a text file with particle color r, g, b, a, x position, y position, z position, x speed, y speed, z speed, and  mass in each line as a comma seperated list\n", arg, arg);
+}
+
+int simulate(void *location){//simulate from starting and ending position in the array
+	loc position = *(loc*)location;//get starting and ending position
+	particle *pd_fill = particle_data[p_time % 2];//get particle data to fill
+	particle *pd_last = particle_data[p_time + 1 % 2];//get last particle data
+	unsigned long long int i;
+	for (i = position.start; i <= position.end; i++){//for each particlke in array
+		register particle fill = pd_last[i];//get last particle data
+		register force particle_force = { 0 };//force of particle
+		register mass p_mass = particle_mass[i];//get particle mass
+		unsigned long long int j;
+		for (j = 0; j < num_particles; j++){//for each particle
+			register double rx = fill.p.x - pd_last[j].p.x;//get distances
+			register double ry = fill.p.y - pd_last[j].p.y;
+			register double rz = fill.p.z - pd_last[j].p.z;
+			if (!rx || !ry || !rz) continue;//skip if any was 0
+			register double distance = sqrt(rx*rx + ry*ry + rz*rz);//get distance
+			register double distance_3 = distance * distance * distance;//get distance cubed
+			particle_force.x += ((G*p_mass*particle_mass[j])/distance_3)*rx;//calculate forces
+			particle_force.y += ((G*p_mass*particle_mass[j]) / distance_3)*ry;
+			particle_force.z += ((G*p_mass*particle_mass[j]) / distance_3)*rz;
+		}
+		fill.v.x += particle_force.x / p_mass;//get velocity
+		fill.v.y += particle_force.y / p_mass;
+		fill.v.z += particle_force.z / p_mass;
+		fill.p.x += fill.v.x;//get position
+		fill.p.y += fill.v.y;
+		fill.p.z += fill.v.z;
+		pd_fill[i] = fill;//set data
+	}
 }

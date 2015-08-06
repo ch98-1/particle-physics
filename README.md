@@ -1,1 +1,1 @@
-3D particle physics simulator
+3D n body simulation with gravity
